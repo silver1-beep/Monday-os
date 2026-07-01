@@ -1,0 +1,118 @@
+// api/self-update.js
+// Lets Monday propose changes to her own index.html, then commit them to
+// GitHub (which triggers a Vercel redeploy) only after explicit approval.
+//
+// Required env vars:
+//   GITHUB_TOKEN   — a GitHub Personal Access Token with "repo" scope (Contents: Read & Write)
+//   GITHUB_REPO    — "yourusername/your-repo-name"
+//   GITHUB_BRANCH  — optional, defaults to "main"
+//   ANTHROPIC_API_KEY — same key used by /api/chat
+
+const TARGET_FILE = 'index.html'; // scope locked to the frontend for now
+
+async function githubRequest(path, options = {}) {
+  const res = await fetch(`https://api.github.com/repos/${process.env.GITHUB_REPO}${path}`, {
+    ...options,
+    headers: {
+      'Authorization': `Bearer ${process.env.GITHUB_TOKEN}`,
+      'Accept': 'application/vnd.github+json',
+      ...(options.headers || {})
+    }
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || `GitHub API error (${res.status})`);
+  return data;
+}
+
+async function getCurrentFile() {
+  const branch = process.env.GITHUB_BRANCH || 'main';
+  const data = await githubRequest(`/contents/${TARGET_FILE}?ref=${branch}`);
+  const content = Buffer.from(data.content, 'base64').toString('utf-8');
+  return { content, sha: data.sha };
+}
+
+async function askClaudeForRevision(currentContent, instruction) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: 'claude-3-5-sonnet-20241022',
+      max_tokens: 8000,
+      system: `You are Monday, editing your own frontend source file (a single self-contained index.html). Apply ONLY the requested change. Preserve everything else exactly — structure, styling conventions, existing features. Output ONLY the complete, raw, updated HTML file with no markdown fences, no preamble, no explanation. The entire response body must be valid HTML starting with <!DOCTYPE html>.`,
+      messages: [
+        { role: 'user', content: `Current file:\n\n${currentContent}\n\nRequested change: ${instruction}\n\nReturn the complete updated file.` }
+      ]
+    })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message || 'Anthropic API error');
+  const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+  if (!text.startsWith('<!DOCTYPE') && !text.startsWith('<!doctype')) {
+    throw new Error('Model did not return a clean HTML file — rejecting for safety.');
+  }
+  return text;
+}
+
+function summarizeDiff(oldText, newText) {
+  const oldLines = oldText.split('\n');
+  const newLines = newText.split('\n');
+  let added = 0, removed = 0;
+  const oldSet = new Set(oldLines);
+  const newSet = new Set(newLines);
+  newLines.forEach(l => { if (!oldSet.has(l)) added++; });
+  oldLines.forEach(l => { if (!newSet.has(l)) removed++; });
+  return { added, removed, oldLineCount: oldLines.length, newLineCount: newLines.length };
+}
+
+export default async function handler(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const missing = ['GITHUB_TOKEN', 'GITHUB_REPO', 'ANTHROPIC_API_KEY'].filter(k => !process.env[k]);
+  if (missing.length) return res.status(500).json({ error: `Missing server env vars: ${missing.join(', ')}` });
+
+  const { action, instruction, proposedContent, sha } = req.body || {};
+
+  try {
+    if (action === 'propose') {
+      if (!instruction || !instruction.trim()) {
+        return res.status(400).json({ error: 'instruction is required' });
+      }
+      const { content: currentContent, sha: currentSha } = await getCurrentFile();
+      const newContent = await askClaudeForRevision(currentContent, instruction);
+      const diff = summarizeDiff(currentContent, newContent);
+      return res.status(200).json({
+        status: 'proposed',
+        sha: currentSha,
+        proposedContent: newContent,
+        diff,
+        instruction
+      });
+    }
+
+    if (action === 'commit') {
+      if (!proposedContent || !sha) {
+        return res.status(400).json({ error: 'proposedContent and sha are required to commit' });
+      }
+      const branch = process.env.GITHUB_BRANCH || 'main';
+      const result = await githubRequest(`/contents/${TARGET_FILE}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: `Monday self-update: ${(instruction || 'requested change').slice(0, 72)}`,
+          content: Buffer.from(proposedContent, 'utf-8').toString('base64'),
+          sha,
+          branch
+        })
+      });
+      return res.status(200).json({ status: 'committed', commitUrl: result.commit?.html_url || null });
+    }
+
+    return res.status(400).json({ error: 'action must be "propose" or "commit"' });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+}
