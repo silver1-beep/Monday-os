@@ -1,0 +1,12 @@
+{
+  "name": "monday-os",
+  "version": "1.1.0",
+  "description": "J.A.R.V.I.S. inspired AI voice assistant with self-contained evolution pipelines",
+  "main": "api/chat.js",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.20.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
