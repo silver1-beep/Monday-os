@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MONDAY // OS NEXUS</title>
+<link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiTW9uZGF5IE9TIiwic2hvcnRfbmFtZSI6Ik1vbmRheSIsInN0YXJ0X3VybCI6Ii4vIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiIzA1MDkwZiIsInRoZW1lX2NvbG9yIjoiIzAwZDRmZiJ9">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Inter:wght@300;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #040811;
+    --panel: rgba(8, 18, 36, 0.7);
+    --panel-edge: rgba(0, 212, 255, 0.2);
+    --panel-glow: rgba(0, 212, 255, 0.03);
+    --cyan: #00d4ff;
+    --cyan-dim: #006680;
+    --cyan-glow: rgba(0, 212, 255, 0.4);
+    --gold: #ffb02e;
+    --text: #d1f4ff;
+    --text-dim: #5c8599;
+    --danger: #ff4a4a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    padding: 24px 16px;
+    background-image: 
+      radial-gradient(circle at 50% 30%, rgba(0, 212, 255, 0.08), transparent 70%),
+      linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+      linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+    background-size: 100% 100%, 100% 4px, 6px 100%;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  body::after {
+    content: " ";
+    display: block;
+    position: fixed;
+    top: 0; left: 0; bottom: 0; right: 0;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.04), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.04));
+    z-index: 99999;
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  .mono { font-family: 'Share Tech Mono', monospace; }
+  .cyber-font { font-family: 'Orbitron', sans-serif; }
+  .wrap { max-width: 720px; margin: 0 auto; z-index: 10; position: relative; }
+
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 14px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--panel-edge);
+    text-shadow: 0 0 10px var(--cyan-glow);
+  }
+  .brand .name { font-weight: 900; font-size: 20px; letter-spacing: 0.15em; color: #fff; }
+  .brand .version { font-size: 10px; color: var(--cyan); margin-left: 5px; vertical-align: super; }
+  
+  .status-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--cyan);
+    border: 1px solid var(--panel-edge);
+    padding: 6px 14px;
+    border-radius: 4px;
+    background: rgba(0, 212, 255, 0.05);
+    box-shadow: inset 0 0 10px rgba(0, 212, 255, 0.1);
+  }
+  .status-pill.off { color: var(--text-dim); border-color: rgba(255,255,255,0.1); background: transparent; box-shadow: none; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 10px var(--cyan); animation: corePulse 1.5s infinite; }
+  .status-pill.off .dot { background: var(--text-dim); box-shadow: none; animation: none; }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-edge);
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4), inset 0 0 15px var(--panel-glow);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    position: relative;
+  }
+  .panel::before {
+    content: ''; position: absolute; top: 0; left: 0; width: 8px; height: 8px; border-top: 2px solid var(--cyan); border-left: 2px solid var(--cyan);
+  }
+  .panel::after {
+    content: ''; position: absolute; bottom: 0; right: 0; width: 8px; height: 8px; border-bottom: 2px solid var(--cyan); border-right: 2px solid var(--cyan);
+  }
+
+  .reactor-panel { display: flex; flex-direction: column; align-items: center; padding: 40px 20px; }
+  .canvas-container { position: relative; width: 220px; height: 220px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+  
+  .wake-hint {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 16px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-align: center;
+    text-shadow: 0 0 5px rgba(0, 212, 255, 0.2);
+  }
+
+  .panel-title {
+    font-size: 12px;
+    color: var(--cyan);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 700;
+  }
+  
+  .chat { display: flex; flex-direction: column; gap: 14px; max-height: 380px; overflow-y: auto; margin-bottom: 16px; padding-right: 6px; }
+  .chat::-webkit-scrollbar { width: 4px; }
+  .chat::-webkit-scrollbar-thumb { background: var(--cyan-dim); border-radius: 2px; }
+
+  .msg { font-size: 14px; line-height: 1.6; padding: 12px 16px; border-radius: 4px; max-width: 85%; position: relative; }
+  .msg.user {
+    align-self: flex-end;
+    background: rgba(0, 212, 255, 0.08);
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    border-right: 3px solid var(--cyan);
+  }
+  .msg.assistant {
+    align-self: flex-start;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(92, 133, 153, 0.2);
+    border-left: 3px solid var(--gold);
+  }
+  .msg .who {
+    font-size: 10px;
+    color: var(--text-dim);
+    display: block;
+    margin-bottom: 6px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .msg.user .who { color: var(--cyan); text-align: right; }
+  .msg.assistant .who { color: var(--gold); }
+
+  .input-row { display: flex; gap: 10px; }
+  input[type=text] {
+    flex: 1;
+    background: rgba(4, 8, 17, 0.8);
+    border: 1px solid var(--panel-edge);
+    color: #fff;
+    padding: 12px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: all 0.25s ease;
+  }
+  input[type=text]:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 12px var(--cyan-glow); }
+  
+  button {
+    background: transparent;
+    border: 1px solid var(--cyan);
+    color: var(--cyan);
+    padding: 12px 22px;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  button:hover { background: var(--cyan); color: var(--bg); box-shadow: 0 0 15px var(--cyan); }
+  button:active { transform: scale(0.97); }
+  button.ghost { border-color: var(--text-dim); color: var(--text-dim); }
+  button.ghost:hover { background: rgba(92, 133, 153, 0.1); color: var(--text); }
+
+  .settings-row { display: flex; justify-content: space-between; align-items: center; font-size: 13.5px; padding: 10px 0; border-bottom: 1px solid rgba(0, 212, 255, 0.1); }
+  .settings-row:last-child { border-bottom: none; }
+  .settings-row input[type=text] { max-width: 160px; padding: 6px 10px; font-size: 13px; text-align: center; }
+
+  .badge-scope { font-size: 10px; color: var(--gold); border: 1px solid var(--gold); padding: 2px 8px; border-radius: 3px; }
+  .proposal-box { margin-top: 14px; border: 1px solid var(--gold); background: rgba(255, 176, 46, 0.04); border-radius: 4px; padding: 14px; }
+  .proposal-summary { font-size: 13px; line-height: 1.6; margin-bottom: 12px; }
+  .proposal-summary b { color: var(--gold); }
+  .proposal-actions { display: flex; gap: 10px; }
+  .proposal-actions button { flex: 1; padding: 10px; border-color: var(--gold); color: var(--gold); }
+  .proposal-actions button:hover { background: var(--gold); color: var(--bg); box-shadow: 0 0 15px var(--gold); }
+  
+  .footer-note { text-align: center; font-size: 11px; color: var(--text-dim); margin-top: 12px; letter-spacing: 0.15em; text-transform: uppercase; }
+
+  @keyframes corePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand cyber-font"><span class="name">MONDAY<span class="version mono">v1.1</span></span></div>
+    <div class="status-pill off mono" id="statusPill"><span class="dot"></span><span id="statusText">SYSTEM IDLE</span></div>
+  </div>
+
+  <div class="panel reactor-panel">
+    <div class="canvas-container" id="reactorContainer">
+      <canvas id="reactorCore"></canvas>
+    </div>
+    <div class="wake-hint mono" id="hint">NEXUS CAPACITOR: TAP CORE FOR WAKE NODE</div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title cyber-font"><div>// ARCHIVE COMM_LOG</div></div>
+    <div class="chat" id="chat"></div>
+    <div class="input-row">
+      <input type="text" id="textInput" class="mono" placeholder="Input structural strings to MONDAY...">
+      <button id="sendBtn" class="mono">Execute</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title cyber-font"><div>// CORE PARAMS</div> <button class="ghost mono" id="clearMem" style="font-size:10px; padding:4px 8px;">Purge Storage</button></div>
+    <div class="settings-row mono"><span>OPERATOR IDENTITY LABEL</span><input type="text" id="ownerTitle" value="Sir"></div>
+    <div class="settings-row mono"><span>VOCAL SYNTHESIS OUT</span><input type="checkbox" id="voiceToggle" checked style="accent-color: var(--cyan);"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title cyber-font"><div>// RECURSIVE RE-COMPILATION</div> <span class="badge-scope mono">index.html local development scope</span></div>
+    <div class="settings-row" style="border-bottom:none; flex-direction:column; align-items:stretch; gap:10px;">
+      <input type="text" id="selfUpdateInput" class="mono" placeholder='Specify programmatic updates (e.g., "inject diagnostic grids")'>
+      <button id="proposeBtn" class="mono">Propose Mutation</button>
+    </div>
+    <div id="proposalBox" class="proposal-box" style="display:none;">
+      <div class="proposal-summary mono" id="proposalSummary"></div>
+      <div class="proposal-actions mono">
+        <button id="applyBtn">Patch Binary</button>
+        <button class="ghost" id="cancelBtn">Abort</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-note mono">Secure Operating Array // Priority Override Authorized</div>
+</div>
+
+<script>
+const API_ENDPOINT = '/api/chat';
+const MEM_KEY = 'monday_memory_v1';
+
+const chatEl = document.getElementById('chat');
+const textInput = document.getElementById('textInput');
+const sendBtn = document.getElementById('sendBtn');
+const statusPill = document.getElementById('statusPill');
+const statusText = document.getElementById('statusText');
+const hint = document.getElementById('hint');
+const ownerTitleInput = document.getElementById('ownerTitle');
+const voiceToggle = document.getElementById('voiceToggle');
+const clearMemBtn = document.getElementById('clearMem');
+
+let memory = JSON.parse(localStorage.getItem(MEM_KEY) || '{"messages":[],"ownerTitle":"Sir"}');
+ownerTitleInput.value = memory.ownerTitle || 'Sir';
+
+function saveMemory(){ localStorage.setItem(MEM_KEY, JSON.stringify(memory)); }
+function setStatus(label, live){
+  statusText.textContent = `SYSTEM: ${label}`;
+  statusPill.classList.toggle('off', !live);
+  if(label === 'LISTENING') systemState = 'listening';
+  else if(label === 'THINKING') systemState = 'thinking';
+  else systemState = 'idle';
+}
+
+function renderMessage(role, text){
+  const div = document.createElement('div');
+  div.className = 'msg ' + (role === 'user' ? 'user' : 'assistant');
+  div.innerHTML = `<span class="who mono">${role === 'user' ? (memory.ownerTitle || 'Sir') : 'MONDAY'}</span>${text.replace(/</g,'&lt;')}`;
+  chatEl.appendChild(div);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+function renderHistory(){
+  chatEl.innerHTML = '';
+  memory.messages.forEach(m => renderMessage(m.role, m.content));
+}
+renderHistory();
+
+async function sendToMonday(text){
+  if(!text.trim()) return;
+  renderMessage('user', text);
+  memory.messages.push({role:'user', content:text});
+  saveMemory();
+  textInput.value = '';
+  setStatus('THINKING', true);
+
+  try{
+    const res = await fetch(API_ENDPOINT, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        messages: memory.messages.slice(-20),
+        ownerTitle: memory.ownerTitle
+      })
+    });
+    if(!res.ok) throw new Error('Status breakdown: ' + res.status);
+    const data = await res.json();
+    const reply = data.reply || "Transmission zeroed. No content packet returned.";
+    renderMessage('assistant', reply);
+    memory.messages.push({role:'assistant', content:reply});
+    saveMemory();
+    if(voiceToggle.checked) speak(reply);
+  }catch(err){
+    renderMessage('assistant', 'Core pipeline error: ' + err.message + '. Verify env tokens.');
+  }finally{
+    setStatus('SYSTEM IDLE', false);
+  }
+}
+
+sendBtn.addEventListener('click', () => sendToMonday(textInput.value));
+textInput.addEventListener('keydown', e => { if(e.key === 'Enter') sendToMonday(textInput.value); });
+
+ownerTitleInput.addEventListener('change', () => {
+  memory.ownerTitle = ownerTitleInput.value || 'Sir';
+  saveMemory();
+});
+
+clearMemBtn.addEventListener('click', () => {
+  if(confirm('Purge all localized memory?')){
+    memory.messages = [];
+    saveMemory();
+    renderHistory();
+  }
+});
+
+/* ---------- ARC REACTOR HOVER/AUDIO VISUAL CANVAS ENGINE ---------- */
+const canvas = document.getElementById('reactorCore');
+const ctx = canvas.getContext('2d');
+const container = document.getElementById('reactorContainer');
+let rotationAngle = 0;
+let systemState = 'idle';
+
+function resizeCanvas() {
+  canvas.width = container.clientWidth * window.devicePixelRatio;
+  canvas.height = container.clientHeight * window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+function drawArcReactor() {
+  const w = container.clientWidth;
+  const h = container.clientHeight;
+  const cx = w / 2;
+  const cy = h / 2;
+  ctx.clearRect(0, 0, w, h);
+
+  let pulseScale = 1;
+  let dynamicCyan = '#00d4ff';
+  
+  if (systemState === 'listening') {
+    pulseScale = 1 + Math.sin(Date.now() * 0.01) * 0.06;
+    rotationAngle += 0.04;
+  } else if (systemState === 'thinking') {
+    pulseScale = 1 + Math.sin(Date.now() * 0.02) * 0.03;
+    rotationAngle -= 0.09;
+    dynamicCyan = '#ffb02e'; 
+  } else {
+    pulseScale = 1 + Math.sin(Date.now() * 0.002) * 0.02;
+    rotationAngle += 0.005;
+  }
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(pulseScale, pulseScale);
+
+  ctx.strokeStyle = systemState === 'thinking' ? 'rgba(255,176,46,0.1)' : 'rgba(0, 212, 255, 0.15)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(0, 0, 95, 0, Math.PI * 2); ctx.stroke();
+
+  ctx.save();
+  ctx.rotate(rotationAngle);
+  ctx.strokeStyle = dynamicCyan;
+  ctx.lineWidth = 3;
+  ctx.shadowBlur = 15;
+  ctx.shadowColor = dynamicCyan;
+  
+  for (let i = 0; i < 8; i++) {
+    ctx.beginPath();
+    ctx.arc(0, 0, 75, (i * Math.PI / 4), (i * Math.PI / 4) + (Math.PI / 6));
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  ctx.save();
+  ctx.rotate(-rotationAngle * 0.5);
+  ctx.strokeStyle = systemState === 'thinking' ? 'rgba(255,176,46,0.4)' : 'rgba(0, 212, 255, 0.4)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 12]);
+  ctx.beginPath(); ctx.arc(0, 0, 52, 0, Math.PI * 2); ctx.stroke();
+  ctx.restore();
+
+  let glowGradient = ctx.createRadialGradient(0, 0, 2, 0, 0, 35);
+  glowGradient.addColorStop(0, '#ffffff');
+  glowGradient.addColorStop(0.2, dynamicCyan);
+  glowGradient.addColorStop(1, 'transparent');
+  ctx.fillStyle = glowGradient;
+  ctx.beginPath(); ctx.arc(0, 0, 35, 0, Math.PI * 2); ctx.fill();
+
+  ctx.restore();
+  requestAnimationFrame(drawArcReactor);
+}
+drawArcReactor();
+
+/* ---------- Voice Engine Operations ---------- */
+let recognition = null;
+let isListening = false;
+
+function speak(text){
+  if(!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.rate = 1.05; utter.pitch = 0.85; 
+  window.speechSynthesis.speak(utter);
+}
+
+function initRecognition(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){
+    hint.textContent = 'SPEECH RECOGNITION NOT SUPPORTED BY BROWSER';
+    return;
+  }
+  recognition = new SR();
+  recognition.continuous = true;
+  recognition.interimResults = false;
+  recognition.lang = 'en-US';
+
+  recognition.onresult = (e) => {
+    const result = e.results[e.results.length - 1][0].transcript.trim();
+    if(/^monday/i.test(result)){
+      const command = result.replace(/^monday[,]?\s*/i, '');
+      if(command) sendToMonday(command);
+      else { setStatus('LISTENING', true); }
+    } else if(isListening){
+      sendToMonday(result);
+    }
+  };
+  recognition.onerror = () => { setStatus('SYSTEM IDLE', false); };
+  recognition.onend = () => { if(isListening) recognition.start(); };
+}
+
+container.addEventListener('click', () => {
+  if(!recognition) initRecognition();
+  if(!recognition) return;
+  if(isListening){
+    isListening = false;
+    recognition.stop();
+    setStatus('SYSTEM IDLE', false);
+    hint.textContent = 'NEXUS CAPACITOR: TAP CORE FOR WAKE NODE';
+  }else{
+    isListening = true;
+    recognition.start();
+    setStatus('LISTENING', true);
+    hint.textContent = 'LIVE CORE DEPLOYED // TRANSCRIPTION IN PROGRESS';
+  }
+});
+
+/* ---------- Mutation Handler (Self-Update) ---------- */
+const proposeBtn = document.getElementById('proposeBtn');
+const selfUpdateInput = document.getElementById('selfUpdateInput');
+const proposalBox = document.getElementById('proposalBox');
+const proposalSummary = document.getElementById('proposalSummary');
+const applyBtn = document.getElementById('applyBtn');
+const cancelBtn = document.getElementById('cancelBtn');
+
+let pendingProposal = null;
+
+proposeBtn.addEventListener('click', async () => {
+  const instruction = selfUpdateInput.value.trim();
+  if (!instruction) return;
+  proposeBtn.disabled = true;
+  proposeBtn.textContent = 'Analyzing Vector...';
+  proposalBox.style.display = 'none';
+
+  try {
+    const res = await fetch('/api/self-update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'propose', instruction })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Vector generation collapsed.');
+
+    pendingProposal = { sha: data.sha, proposedContent: data.proposedContent, instruction };
+    proposalSummary.innerHTML = `<b>MUTATION MAP:</b> ${instruction}<br><b>DELTA TRACK:</b> +${data.diff.added} / -${data.diff.removed} lines modified.`;
+    proposalBox.style.display = 'block';
+  } catch (err) {
+    proposalSummary.innerHTML = `<b style="color:var(--danger)">EXCEPTION EVENT:</b> ${err.message}`;
+    proposalBox.style.display = 'block';
+    pendingProposal = null;
+  } finally {
+    proposeBtn.disabled = false;
+    proposeBtn.textContent = 'Propose Mutation';
+  }
+});
+
+applyBtn.addEventListener('click', async () => {
+  if (!pendingProposal) return;
+  applyBtn.disabled = true;
+  applyBtn.textContent = 'Patching Matrix...';
+  try {
+    const res = await fetch('/api/self-update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'commit', ...pendingProposal })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Patch rejection event.');
+    proposalSummary.innerHTML = `<b style="color:var(--cyan)">PATCH DEPLOYED.</b> System auto-redeploying. Refresh in 30-60s.`;
+    selfUpdateInput.value = '';
+    pendingProposal = null;
+  } catch (err) {
+    proposalSummary.innerHTML = `<b style="color:var(--danger)">FAILED:</b> ${err.message}`;
+  } finally {
+    applyBtn.disabled = false;
+    applyBtn.textContent = 'Patch Binary';
+  }
+});
+
+cancelBtn.addEventListener('click', () => {
+  pendingProposal = null;
+  proposalBox.style.display = 'none';
+  selfUpdateInput.value = '';
+});
+</script>
+</body>
+</html>
